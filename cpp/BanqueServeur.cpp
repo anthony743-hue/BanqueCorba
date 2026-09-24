@@ -5,7 +5,6 @@
 #include <cstdlib>
 
 #include <mysql/mysql.h>
-
 #include "banque.hh"
 #include "ConnectionDB.h"
 #include <omniORB4/Naming.hh>
@@ -23,8 +22,7 @@ public:
     CORBA::Double getSolde(MYSQL& conn, CORBA::Long id);
     void effectuerOperation(CORBA::Double montant, CORBA::Long id) override;
     void effectuerOperation(MYSQL& conn, CORBA::Double montant, CORBA::Long id);
-    void isCompteExist(CORBA::Long id) override;
-    banque::ListeComptes* listerComptes() override;
+    banque::ListeComptes* listerComptes();
 
 private:
     ConnectionDB& conn_;
@@ -54,132 +52,118 @@ string BanqueOperatorPOA::echapper(MYSQL& conn, const string& s)
     return buffer;
 }
 
-CORBA::Double BanqueOperatorPOA::getSolde(CORBA::Long id)
-{
-    MYSQL* conn = conn_.open();
-    try {
-        CORBA::Double solde = getSolde(*conn, id);
-        mysql_close(conn);
-        return solde;
-    }
-    catch (...) {
-        mysql_close(conn);
-        throw;
-    }
-}
+// CORBA::Double BanqueOperatorPOA::getSolde(CORBA::Long id)
+// {
+//     MYSQL* connection = conn_.open();
+//     try {
+//         CORBA::Double solde = getSolde(*connection, id);
+//         mysql_close(connection);
+//         return solde;
+//     }
+//     catch (...) {
+//         mysql_close(connection);
+//         throw;
+//     }
+// }
 
-CORBA::Double BanqueOperatorPOA::getSolde(MYSQL& conn, CORBA::Long id)
-{
-    ostringstream sql;
-    sql << "SELECT solde FROM comptes WHERE id = " << id;
+// CORBA::Double BanqueOperatorPOA::getSolde(MYSQL& connection, CORBA::Long id)
+// {
+//     ostringstream sql;
+//     sql << "SELECT solde FROM comptes WHERE id = " << id;
 
-    exec(conn, sql.str());
+//     exec(connection, sql.str());
 
-    MYSQL_RES* res = mysql_store_result(&conn);
-    if (!res) {
-        throw runtime_error(
-            string("MySQL store_result: ") + mysql_error(&conn));
-    }
+//     MYSQL_RES* res = mysql_store_result(&connection);
+//     if (!res) {
+//         throw runtime_error(
+//             string("MySQL store_result: ") + mysql_error(&connection));
+//     }
 
-    MYSQL_ROW row = mysql_fetch_row(res);
-    if (!row) {
-        mysql_free_result(res);
-        banque::CompteIntrouvable ex;
-        ex.titulaire = CORBA::string_dup(
-            ("Compte inexistant : id=" + to_string(id)).c_str());
-        throw ex;
-    }
+//     MYSQL_ROW row = mysql_fetch_row(res);
+//     if (!row) {
+//         mysql_free_result(res);
+//         banque::CompteIntrouvable ex;
+//         ex.id = id;
+//         throw ex;
+//     }
 
-    CORBA::Double solde = atof(row[0]);
-    mysql_free_result(res);
-    return solde;
-}
+//     CORBA::Double solde = atof(row[0]);
+//     mysql_free_result(res);
+//     return solde;
+// }
 
-void BanqueOperatorPOA::effectuerOperation(CORBA::Double montant,
-                                           CORBA::Long id)
-{
-    MYSQL* conn = conn_.open();
-    try {
-        effectuerOperation(*conn, montant, id);
-        mysql_close(conn);
-    }
-    catch (...) {
-        mysql_close(conn);
-        throw;
-    }
-}
+// void BanqueOperatorPOA::effectuerOperation(CORBA::Double montant,
+//                                            CORBA::Long id)
+// {
+//     MYSQL* conn = conn_.open();
+//     try {
+//         effectuerOperation(*conn, montant, id);
+//         mysql_close(conn);
+//     }
+//     catch (...) {
+//         mysql_close(conn);
+//         throw;
+//     }
+// }
 
-void BanqueOperatorPOA::effectuerOperation(MYSQL& conn,
-                                           CORBA::Double montant,
-                                           CORBA::Long id)
-{
-    CORBA::Double soldeActuel = getSolde(conn, id);
+// void BanqueOperatorPOA::effectuerOperation(MYSQL& connection,
+//                                            CORBA::Double montant,
+//                                            CORBA::Long id)
+// {
+//     CORBA::Double soldeActuel = getSolde(connection, id);
 
-    if (soldeActuel + montant < 0.0) {
-        banque::SoldeInsuffisant ex;
-        ex.solde   = soldeActuel;
-        ex.montant = montant;
-        throw ex;
-    }
+//     if (soldeActuel + montant < 0.0) {
+//         banque::SoldeInsuffisant ex;
+//         ex.solde   = soldeActuel;
+//         ex.montant = montant;
+//         throw ex;
+//     }
 
-    ostringstream sql;
-    sql << "UPDATE comptes SET solde = solde + " << montant
-        << " WHERE id = " << id;
+//     ostringstream sql;
+//     sql << "UPDATE comptes SET solde = solde + " << montant
+//         << " WHERE id = " << id;
 
-    exec(conn, sql.str());
-}
+//     exec(connection, sql.str());
+// }
 
-void BanqueOperatorPOA::isCompteExist(CORBA::Long id)
-{
-    MYSQL* conn = conn_.open();
-    try {
-        getSolde(*conn, id);
-        mysql_close(conn);
-    }
-    catch (...) {
-        mysql_close(conn);
-        throw;
-    }
-}
+// banque::ListeComptes* BanqueOperatorPOA::listerComptes()
+// {
+//     MYSQL* connection = conn_.open();
+//     MYSQL_RES* res = nullptr;
 
-banque::ListeComptes* BanqueOperatorPOA::listerComptes()
-{
-    MYSQL* conn = conn_.open();
-    MYSQL_RES* res = nullptr;
+//     try {
+//         exec(*connection, "SELECT id, titulaire, solde FROM comptes ORDER BY id");
 
-    try {
-        exec(*conn, "SELECT id, titulaire, solde FROM comptes ORDER BY id");
+//         res = mysql_store_result(connection);
+//         if (!res) {
+//             throw runtime_error(
+//                 string("MySQL store_result: ") + mysql_error(connection));
+//         }
 
-        res = mysql_store_result(conn);
-        if (!res) {
-            throw runtime_error(
-                string("MySQL store_result: ") + mysql_error(conn));
-        }
+//         my_ulonglong n = mysql_num_rows(res);
 
-        my_ulonglong n = mysql_num_rows(res);
+//         banque::ListeComptes* liste = new banque::ListeComptes();
+//         liste->length(static_cast<CORBA::ULong>(n));
 
-        banque::ListeComptes* liste = new banque::ListeComptes();
-        liste->length(static_cast<CORBA::ULong>(n));
+//         CORBA::ULong i = 0;
+//         MYSQL_ROW ligne;
+//         while ((ligne = mysql_fetch_row(res)) != nullptr) {
+//             (*liste)[i].id        = static_cast<CORBA::Long>(atol(ligne[0]));
+//             (*liste)[i].titulaire = CORBA::string_dup(ligne[1] ? ligne[1] : "");
+//             (*liste)[i].solde     = atof(ligne[2] ? ligne[2] : "0");
+//             ++i;
+//         }
 
-        CORBA::ULong i = 0;
-        MYSQL_ROW ligne;
-        while ((ligne = mysql_fetch_row(res)) != nullptr) {
-            (*liste)[i].id        = static_cast<CORBA::Long>(atol(ligne[0]));
-            (*liste)[i].titulaire = CORBA::string_dup(ligne[1] ? ligne[1] : "");
-            (*liste)[i].solde     = atof(ligne[2] ? ligne[2] : "0");
-            ++i;
-        }
-
-        mysql_free_result(res);
-        mysql_close(conn);
-        return liste;
-    }
-    catch (...) {
-        if (res) mysql_free_result(res);
-        mysql_close(conn);
-        throw;
-    }
-}
+//         mysql_free_result(res);
+//         mysql_close(connection);
+//         return liste;
+//     }
+//     catch (...) {
+//         if (res) mysql_free_result(res);
+//         mysql_close(connection);
+//         throw;
+//     }
+// }
 
 int main(int argc, char* argv[])
 {
@@ -192,7 +176,7 @@ int main(int argc, char* argv[])
             PortableServer::POA::_narrow(poaObj);
         poa->the_POAManager()->activate();
 
-        ConnectionDB db("localhost", 3306, "banque", "banque", "banque");
+        ConnectionDB db;
         cout << "[Banque]\n" << db.toString() << endl;
 
         BanqueOperatorPOA* banqueOper = new BanqueOperatorPOA(db, orb);
@@ -222,9 +206,9 @@ int main(int argc, char* argv[])
         cout << "[Banque] Serveur pret." << endl;
         orb->run();
 
-        poa->destroy(TRUE, TRUE);
-        delete banqueOper;
-        orb->destroy();
+        // poa->destroy(TRUE, TRUE);
+        // delete banqueOper;
+        // orb->destroy();
     }
     catch (const CosNaming::NamingContext::NotFound&) {
         cerr << "Service de noms joignable mais nom absent.\n";

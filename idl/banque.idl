@@ -7,7 +7,7 @@ module banque {
     };
 
     exception CompteIntrouvable {
-        int id;
+        long id;
     };
 
     struct mouvementCompte {
@@ -24,11 +24,9 @@ module banque {
     typedef sequence<Compte> ListeComptes;
 
     interface BanqueOperator {
-        double getSolde(in long id);
+        double getSolde(in long id) raises (CompteIntrouvable);
         void effectuerOperation(in double montant, in long id)
             raises (SoldeInsuffisant);
-        void isCompteExist(in long id)
-            raises (CompteIntrouvable);
         ListeComptes listerComptes();
     };
 };

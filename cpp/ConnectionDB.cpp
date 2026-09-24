@@ -19,9 +19,6 @@ ConnectionDB::ConnectionDB(const string& host,
                            const string& dbname)
     : host_(host), port_(port), user_(user), pass_(password), base_(dbname) {}
 
-// ---------------------------------------------------------------
-// Accesseurs
-// ---------------------------------------------------------------
 string   ConnectionDB::getHost() const { return host_; }
 uint16_t ConnectionDB::getPort() const { return port_; }
 string   ConnectionDB::getUser() const { return user_; }
@@ -39,16 +36,12 @@ string ConnectionDB::toString() const {
     return oss.str();
 }
 
-// ---------------------------------------------------------------
-// open : ouvre une nouvelle connexion MySQL
-// L'appelant est responsable de mysql_close().
-// ---------------------------------------------------------------
 MYSQL* ConnectionDB::open() const {
     if (port_ == 0) {
         throw invalid_argument("ConnectionDB: port invalide (0)");
     }
 
-    MYSQL* conn = mysql_init(nullptr);
+    const MYSQL* conn = mysql_init(nullptr);
     if (!conn) {
         throw runtime_error("ConnectionDB: mysql_init a echoue");
     }
@@ -59,7 +52,7 @@ MYSQL* ConnectionDB::open() const {
                             pass_.c_str(),
                             base_.c_str(),
                             port_,
-                            nullptr,
+                            "/opt/lampp/var/mysql/mysql.sock",
                             0)) {
         string err = string("MySQL error ")
                    + to_string(mysql_errno(conn))

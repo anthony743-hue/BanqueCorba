@@ -1,9 +1,9 @@
+#pragma once
 #ifndef CONNECTION_DB_H
 #define CONNECTION_DB_H
 
 #include <string>
 #include <cstdint>
-#include "mysql/mysql.h"
 
 using namespace std;
 

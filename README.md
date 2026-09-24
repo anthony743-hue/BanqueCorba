@@ -186,9 +186,9 @@ bash scripts/02-demarrer-naming.sh
 # omniNames -start 2809 -logdir /var/lib/omniNames
 
 # ---- Terminal 2 : serveur d'audit Java -----------------------------------
-cd java
-java -cp classes ServeurAudit \
-     -ORBInitRef NameService=corbaloc::localhost:2809/NameService
+# cd java
+# java -cp classes ServeurAudit \
+#      -ORBInitRef NameService=corbaloc::localhost:2809/NameService
 
 # ---- Terminal 3 : serveur Banque C++ -------------------------------------
 cd cpp
