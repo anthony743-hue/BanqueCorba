@@ -15,7 +15,7 @@ sudo apt install -y build-essential make pkg-config
 #   omniorb-idl          : fichiers .idl des services COS
 #   omniorb-nameserver   : omniNames (service de noms)
 #   libomniorb4-dev      : en-têtes + bibliothèques
-sudo apt install -y omniorb omniidl omniorb-idl omniorb-nameserver libomniorb4-dev
+sudo apt install -y omniorb omniidl omniorb-idl omniorb-nameserver libomniorb4-dev libcos4-dev
 
 # --- MySQL : serveur + bibliothèque cliente C ------------------------------
 sudo apt install -y mysql-server libmysqlclient-dev
