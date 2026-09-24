@@ -1,0 +1,34 @@
+// banque.idl
+module banque {
+
+    exception SoldeInsuffisant {
+        double solde;
+        double montant;
+    };
+
+    exception CompteIntrouvable {
+        int id;
+    };
+
+    struct mouvementCompte {
+        long id;              // <- int remplacé par long (seule modif)
+        double montant;
+    };
+
+    struct Compte {
+        long id;              // <- int remplacé par long
+        string titulaire;
+        double solde;
+    };
+
+    typedef sequence<Compte> ListeComptes;
+
+    interface BanqueOperator {
+        double getSolde(in long id);
+        void effectuerOperation(in double montant, in long id)
+            raises (SoldeInsuffisant);
+        void isCompteExist(in long id)
+            raises (CompteIntrouvable);
+        ListeComptes listerComptes();
+    };
+};

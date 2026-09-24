@@ -1,0 +1,55 @@
+private static void lister(ServiceBanque banque) {
+        Compte[] comptes = banque.listerComptes();
+        System.out.printf("%-5s %-25s %15s%n", "ID", "TITULAIRE", "SOLDE");
+        for (Compte c : comptes) {
+            System.out.printf("%-5d %-25s %15.2f%n", c.id, c.titulaire, c.solde);
+        }
+        if (comptes.length == 0) System.out.println("(aucun compte)");
+    }
+
+    private static void creer(ServiceBanque banque) throws ErreurBanque {
+        System.out.print("Titulaire : ");
+        String titulaire = sc.nextLine().trim();
+        System.out.print("Solde initial : ");
+        double solde = Double.parseDouble(sc.nextLine().trim());
+
+        int id = banque.creerCompte(titulaire, solde);
+        System.out.println(">> Compte cree, identifiant = " + id);
+    }
+
+    private static void solde(ServiceBanque banque) throws ErreurBanque {
+        System.out.print("Identifiant du compte : ");
+        int id = Integer.parseInt(sc.nextLine().trim());
+        System.out.printf(">> Solde = %.2f%n", banque.consulterSolde(id));
+    }
+
+    private static void deposer(ServiceBanque banque) throws ErreurBanque {
+        System.out.print("Identifiant du compte : ");
+        int id = Integer.parseInt(sc.nextLine().trim());
+        System.out.print("Montant : ");
+        double m = Double.parseDouble(sc.nextLine().trim());
+        banque.deposer(id, m);
+        System.out.printf(">> Depot effectue, nouveau solde = %.2f%n",
+                          banque.consulterSolde(id));
+    }
+
+    private static void retirer(ServiceBanque banque) throws ErreurBanque {
+        System.out.print("Identifiant du compte : ");
+        int id = Integer.parseInt(sc.nextLine().trim());
+        System.out.print("Montant : ");
+        double m = Double.parseDouble(sc.nextLine().trim());
+        banque.retirer(id, m);
+        System.out.printf(">> Retrait effectue, nouveau solde = %.2f%n",
+                          banque.consulterSolde(id));
+    }
+
+    private static void virement(ServiceBanque banque) throws ErreurBanque {
+        System.out.print("Compte source : ");
+        int src = Integer.parseInt(sc.nextLine().trim());
+        System.out.print("Compte destination : ");
+        int dst = Integer.parseInt(sc.nextLine().trim());
+        System.out.print("Montant : ");
+        double m = Double.parseDouble(sc.nextLine().trim());
+        banque.virement(src, dst, m);
+        System.out.println(">> Virement effectue.");
+    }

@@ -1,0 +1,269 @@
+
+static std::string envOr(const char* cle, const char* defaut) {
+    const char* v = ::getenv(cle);
+    return v ? std::string(v) : std::string(defaut);
+}
+
+static std::string nombre(double d) {
+    std::ostringstream o;
+    o << std::fixed << std::setprecision(2) << d;
+    return o.str();
+}
+
+// --------------------------- le servant ------------------------------------
+// POA_banque::Banque est le SQUELETTE généré à partir de l'IDL.
+// Hériter de ce squelette = "je fournis l'implémentation de l'objet CORBA".
+
+class BanqueImpl : public POA_banque::ServiceBanque
+{
+public:
+    BanqueImpl(MYSQL* conn, CORBA::ORB_ptr orb)
+        : conn_(conn),
+          orb_(CORBA::ORB::_duplicate(orb)),
+          audit_(banque::Audit::_nil()) {}
+
+    // --- opérations déclarées dans l'IDL -----------------------------------
+    CORBA::Long   creerCompte(const char* titulaire, CORBA::Double soldeInitial);
+    CORBA::Double consulterSolde(CORBA::Long idCompte);
+    void          deposer(CORBA::Long idCompte, CORBA::Double montant);
+    void          retirer(CORBA::Long idCompte, CORBA::Double montant);
+    void          virement(CORBA::Long source, CORBA::Long destination,
+                           CORBA::Double montant);
+    banque::ListeComptes* listerComptes();
+
+private:
+    MYSQL*            conn_;
+    CORBA::ORB_var    orb_;
+    banque::Audit_var audit_;
+
+    void   exec(const std::string& sql);
+    std::string echapper(const std::string& s);
+    double soldeDe(CORBA::Long id);              // lève ErreurBanque si absent
+    void   majSolde(CORBA::Long id, double delta);
+    void   tracer(CORBA::Long id, const char* type, double montant);
+    void   journaliser(const std::string& op, const std::string& details);
+};
+
+// --------------------------- accès MySQL -----------------------------------
+
+void BanqueImpl::exec(const std::string& sql) {
+    if (mysql_query(conn_, sql.c_str()) != 0)
+        throw banque::ErreurBanque(mysql_error(conn_));
+}
+
+std::string BanqueImpl::echapper(const std::string& s) {
+    std::vector<char> buf(s.size() * 2 + 1);
+    mysql_real_escape_string(conn_, &buf[0], s.c_str(), (unsigned long)s.size());
+    return std::string(&buf[0]);
+}
+
+double BanqueImpl::soldeDe(CORBA::Long id) {
+    std::ostringstream q;
+    q << "SELECT solde FROM compte WHERE id = " << id;
+    exec(q.str());
+
+    MYSQL_RES* res = mysql_store_result(conn_);
+    if (!res) throw banque::ErreurBanque(mysql_error(conn_));
+
+    MYSQL_ROW ligne = mysql_fetch_row(res);
+    if (!ligne) {
+        mysql_free_result(res);
+        std::ostringstream m;
+        m << "Compte introuvable : " << id;
+        throw banque::ErreurBanque(m.str().c_str());
+    }
+    double solde = atof(ligne[0]);
+    mysql_free_result(res);
+    return solde;
+}
+
+void BanqueImpl::majSolde(CORBA::Long id, double delta) {
+    std::ostringstream q;
+    q << "UPDATE compte SET solde = solde + (" << nombre(delta) << ") WHERE id = " << id;
+    exec(q.str());
+}
+
+void BanqueImpl::tracer(CORBA::Long id, const char* type, double montant) {
+    std::ostringstream q;
+    q << "INSERT INTO operation(compte_id, type_operation, montant) VALUES("
+      << id << ",'" << type << "'," << nombre(montant) << ")";
+    exec(q.str());
+}
+
+// ------------------- appel CORBA sortant : C++ -> Java ---------------------
+
+void BanqueImpl::journaliser(const std::string& op, const std::string& details) {
+    try {
+        if (CORBA::is_nil(audit_)) {               // résolution paresseuse
+            CORBA::Object_var o = orb_->resolve_initial_references("NameService");
+            CosNaming::NamingContext_var nc = CosNaming::NamingContext::_narrow(o);
+            CosNaming::Name nom;
+            nom.length(1);
+            nom[0].id   = CORBA::string_dup("Audit");
+            nom[0].kind = CORBA::string_dup("");
+            audit_ = banque::Audit::_narrow(nc->resolve(nom));
+        }
+        if (!CORBA::is_nil(audit_))
+            audit_->journaliser(op.c_str(), details.c_str());
+    }
+    catch (const CORBA::Exception&) {
+        // Le serveur d'audit Java n'est pas lancé : le service bancaire
+        // continue de fonctionner normalement.
+        std::cerr << "[avertissement] service Audit (Java) indisponible\n";
+    }
+}
+
+// --------------------------- implémentations -------------------------------
+
+CORBA::Long BanqueImpl::creerCompte(const char* titulaire, CORBA::Double soldeInitial)
+{
+    std::string t = titulaire ? titulaire : "";
+    if (t.empty())        throw banque::ErreurBanque("Le titulaire est obligatoire");
+    if (soldeInitial < 0) throw banque::ErreurBanque("Solde initial negatif");
+
+    std::ostringstream q;
+    q << "INSERT INTO compte(titulaire, solde) VALUES('"
+      << echapper(t) << "'," << nombre(soldeInitial) << ")";
+    exec(q.str());
+
+    CORBA::Long id = (CORBA::Long) mysql_insert_id(conn_);
+
+    std::ostringstream d;
+    d << "compte=" << id << " titulaire=" << t << " solde=" << nombre(soldeInitial);
+    journaliser("CREATION", d.str());
+
+    std::cout << "[C++] creerCompte -> id " << id << std::endl;
+    return id;
+}
+
+CORBA::Double BanqueImpl::consulterSolde(CORBA::Long idCompte) {
+    double s = soldeDe(idCompte);
+    std::cout << "[C++] consulterSolde(" << idCompte << ") = " << nombre(s) << std::endl;
+    return s;
+}
+
+void BanqueImpl::deposer(CORBA::Long idCompte, CORBA::Double montant) {
+    if (montant <= 0) throw banque::ErreurBanque("Montant invalide");
+    soldeDe(idCompte);                 // vérifie l'existence du compte
+    majSolde(idCompte, montant);
+    tracer(idCompte, "DEPOT", montant);
+
+    std::ostringstream d;
+    d << "compte=" << idCompte << " montant=" << nombre(montant);
+    journaliser("DEPOT", d.str());
+    std::cout << "[C++] deposer " << nombre(montant) << " sur " << idCompte << std::endl;
+}
+
+void BanqueImpl::retirer(CORBA::Long idCompte, CORBA::Double montant) {
+    if (montant <= 0) throw banque::ErreurBanque("Montant invalide");
+    double solde = soldeDe(idCompte);
+    if (solde < montant) throw banque::ErreurBanque("Solde insuffisant");
+
+    majSolde(idCompte, -montant);
+    tracer(idCompte, "RETRAIT", montant);
+
+    std::ostringstream d;
+    d << "compte=" << idCompte << " montant=" << nombre(montant);
+    journaliser("RETRAIT", d.str());
+    std::cout << "[C++] retirer " << nombre(montant) << " sur " << idCompte << std::endl;
+}
+
+void BanqueImpl::virement(CORBA::Long source, CORBA::Long destination,
+                          CORBA::Double montant)
+{
+    if (montant <= 0)          throw banque::ErreurBanque("Montant invalide");
+    if (source == destination) throw banque::ErreurBanque("Comptes identiques");
+
+    exec("START TRANSACTION");
+    try {
+        double s = soldeDe(source);
+        soldeDe(destination);                 // vérifie l'existence
+        if (s < montant) throw banque::ErreurBanque("Solde insuffisant sur le compte source");
+
+        majSolde(source, -montant);
+        majSolde(destination, montant);
+        tracer(source,      "VIREMENT_DEBIT",  montant);
+        tracer(destination, "VIREMENT_CREDIT", montant);
+
+        exec("COMMIT");
+    }
+    catch (...) {
+        mysql_query(conn_, "ROLLBACK");
+        throw;
+    }
+
+    std::ostringstream d;
+    d << "de=" << source << " vers=" << destination << " montant=" << nombre(montant);
+    journaliser("VIREMENT", d.str());
+    std::cout << "[C++] virement " << source << " -> " << destination << std::endl;
+}
+
+
+
+// --------------------------------- main ------------------------------------
+
+int main(int argc, char** argv)
+{
+    MYSQL* conn = NULL;
+    try {
+        // 1. Initialisation de l'ORB (le bus à objets)
+        CORBA::ORB_var orb = CORBA::ORB_init(argc, argv);
+
+        // 2. Récupération et activation du POA racine
+        CORBA::Object_var obj  = orb->resolve_initial_references("RootPOA");
+        PortableServer::POA_var poa = PortableServer::POA::_narrow(obj);
+        poa->the_POAManager()->activate();
+
+        // 3. Connexion MySQL
+        std::string host = envOr("DB_HOST", "localhost");
+        std::string user = envOr("DB_USER", "banque");
+        std::string pass = envOr("DB_PASS", "banque");
+        std::string base = envOr("DB_NAME", "banque");
+
+        conn = mysql_init(NULL);
+        if (!conn) { std::cerr << "mysql_init a echoue\n"; return 1; }
+
+        if (!mysql_real_connect(conn, host.c_str(), user.c_str(), pass.c_str(),
+                                base.c_str(), 0, NULL, 0)) {
+            std::cerr << "Connexion MySQL impossible : " << mysql_error(conn) << "\n";
+            return 1;
+        }
+        mysql_set_character_set(conn, "utf8mb4");
+        std::cout << "[C++] connecte a MySQL (" << base << "@" << host << ")\n";
+
+        // 4. Création + activation du servant
+        BanqueImpl* servant = new BanqueImpl(conn, orb);
+        PortableServer::ObjectId_var oid = poa->activate_object(servant);
+        CORBA::Object_var ref = poa->id_to_reference(oid);
+        servant->_remove_ref();
+
+        // 5. Publication dans le service de noms sous le nom "Banque"
+        CORBA::Object_var nsObj = orb->resolve_initial_references("NameService");
+        CosNaming::NamingContext_var nc = CosNaming::NamingContext::_narrow(nsObj);
+        CosNaming::Name nom;
+        nom.length(1);
+        nom[0].id   = CORBA::string_dup("Banque");
+        nom[0].kind = CORBA::string_dup("");
+        nc->rebind(nom, ref);                 // rebind = écrase l'ancienne entrée
+
+        CORBA::String_var ior = orb->object_to_string(ref);
+        std::cout << "[C++] objet 'Banque' publie dans le service de noms\n";
+        std::cout << "[C++] IOR = " << ior << "\n";
+        std::cout << "[C++] serveur pret, en attente de clients...\n";
+
+        // 6. Boucle d'écoute (bloquante)
+        orb->run();
+    }
+    catch (const CosNaming::NamingContext::NotFound&) {
+        std::cerr << "Service de noms joignable mais nom absent.\n";
+    }
+    catch (const CORBA::TRANSIENT&) {
+        std::cerr << "omniNames est-il demarre ? (CORBA::TRANSIENT)\n";
+    }
+    catch (const CORBA::Exception& e) {
+        std::cerr << "Exception CORBA : " << e._name() << "\n";
+    }
+
+    if (conn) mysql_close(conn);
+    return 0;
+}

@@ -1,0 +1,48 @@
+// ---------------------------------------------------------------------------
+// banque.idl  --  Contrat unique, indépendant du langage (OMG IDL)
+// C'est CE fichier qui est compilé des deux côtés :
+//   - omniidl -bcxx  -> souches/squelettes C++
+//   - idlj     -fall -> souches/squelettes Java
+// ---------------------------------------------------------------------------
+
+module banque {
+
+  struct Compte {
+    long    id;
+    string  titulaire;
+    double  solde;
+  };
+
+  typedef sequence<Compte> ListeComptes;
+
+  exception ErreurBanque {
+    string message;
+  };
+
+  // Service implémenté en JAVA, appelé par le serveur C++  (C++ -> Java)
+  // "oneway" : appel asynchrone, sans valeur de retour ni attente.
+  interface Audit {
+    oneway void journaliser(in string operation, in string details);
+  };
+
+  // Service implémenté en C++, appelé par le client Java   (Java -> C++)
+  interface ServiceBanque {
+    long   creerCompte(in string titulaire, in double soldeInitial)
+             raises (ErreurBanque);
+
+    double consulterSolde(in long idCompte)
+             raises (ErreurBanque);
+
+    void   deposer(in long idCompte, in double montant)
+             raises (ErreurBanque);
+
+    void   retirer(in long idCompte, in double montant)
+             raises (ErreurBanque);
+
+    void   virement(in long source, in long destination, in double montant)
+             raises (ErreurBanque);
+
+    ListeComptes listerComptes();
+  };
+
+};
