@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 [ ] Trouver les services a deployer cote java
 
 [ ] Mettre le cote qui interagit avec C++
@@ -7,3 +8,10 @@
 
     [ ] Completer FileHandler avec une fonction qui lit le fichier pour construire des Etudiants
     
+=======
+[ ] Les types CORBA
+[ ] L'utilisation de policy dans ORB
+[ ]
+[ ] Etablir une connexion entre c++ et mysql
+
+>>>>>>> ebab1f8923d065108095193a7b8a20219a7cf21b
