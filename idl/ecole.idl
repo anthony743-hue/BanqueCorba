@@ -1,0 +1,17 @@
+module ecole {
+
+    exception ErreurBD { string message; };
+
+    struct Etudiant {
+        long   id;
+        string name;
+    };
+
+    typedef sequence<Etudiant> ListeEtudiant;
+
+    interface EtudeOperator {
+        void insertEtudiant(in ListeEtudiant liste) raises (ErreurBD);
+        ListeEtudiant getAll(in long page, in long par_page) raises (ErreurBD);
+    };
+
+};

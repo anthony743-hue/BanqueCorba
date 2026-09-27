@@ -19,8 +19,6 @@ sudo apt install -y omniorb omniidl omniorb-idl omniorb-nameserver libomniorb4-d
 
 # --- MySQL : serveur + bibliothèque cliente C ------------------------------
 sudo apt install -y mysql-server libmysqlclient-dev
-# Variante MariaDB :
-# sudo apt install -y mariadb-server libmariadb-dev libmariadb-dev-compat
 
 # --- Java 8 (idlj et le paquet CORBA org.omg.* sont retirés depuis JDK 11) --
 sudo apt install -y openjdk-8-jdk

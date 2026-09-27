@@ -192,12 +192,12 @@ java -cp classes ServeurAudit \
 
 # ---- Terminal 3 : serveur Banque C++ -------------------------------------
 cd cpp
-./banque_serveur \
+./ecole_serveur \
      -ORBInitRef NameService=corbaloc::localhost:2809/NameService
 
 # ---- Terminal 4 : client Java --------------------------------------------
 cd java
-java -cp classes ClientBanque \
+java -cp classes EcoleClient \
      -ORBInitRef NameService=corbaloc::localhost:2809/NameService
 ```
 

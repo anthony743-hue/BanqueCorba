@@ -1,0 +1,9 @@
+[ ] Trouver les services a deployer cote java
+
+[ ] Mettre le cote qui interagit avec C++
+    [ ] Acceder a l'information d'un etudiant
+
+    [ ] Inserer de nouveau Etudiants (avec verification)
+
+    [ ] Completer FileHandler avec une fonction qui lit le fichier pour construire des Etudiants
+    

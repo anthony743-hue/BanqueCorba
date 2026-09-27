@@ -3,7 +3,8 @@
 
 #include <string>
 #include <cstdint>
-#include "mysql/mysql.h"
+#include <mysql_driver.h>
+#include <mysql_connection.h>
 
 using namespace std;
 
@@ -12,20 +13,13 @@ public:
     ConnectionDB();
 
     // ---------- Constructeur explicite ----------
-    ConnectionDB(const string& host,
+    ConnectionDB(const string& url,const string& host,
                  uint16_t      port,
                  const string& user,
                  const string& password,
                  const string& dbname);
 
-    // ---------- Informations ----------
-    string   getHost() const;
-    uint16_t getPort() const;
-    string   getUser() const;
-    string   getBase() const;
-    string   toString() const;   // mot de passe masqué
-
-    MYSQL* open() const;
+    sql::Connection* getConnection() const;
 
 private:
     string   host_;
@@ -33,6 +27,7 @@ private:
     string   user_;
     string   pass_;
     string   base_;
+    string url_;
 };
 
 #endif
