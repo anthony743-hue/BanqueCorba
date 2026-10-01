@@ -74,7 +74,7 @@ void EtudeOperatorPOA::insertEtudiant(const ecole::ListeEtudiant &liste)
 void EtudeOperatorPOA::insertEtudiant(sql::Connection *conn,
                                       const ecole::ListeEtudiant &liste)
 {
-    std::unique_ptr<sql::PreparedStatement> stmt(
+    unique_ptr<sql::PreparedStatement> stmt(
         conn->prepareStatement("INSERT INTO etudiant (id, name) VALUES (?, ?)"));
 
     for (CORBA::ULong i = 0; i < liste.length(); ++i)
@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
         CosNaming::Name name;
         name.length(1);
         name[0].id = CORBA::string_dup("EtudeOperator");
-        name[0].kind = CORBA::string_dup("");
+        // name[0].kind = CORBA::string_dup("");
         nc->rebind(name, ref);
 
         cout << "EtudeOperator est enregistré et prêt.\n";

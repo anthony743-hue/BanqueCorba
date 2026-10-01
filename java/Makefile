@@ -8,6 +8,7 @@
 IDL_FILE = ../idl/ecole.idl
 SRC      = src
 CLASSES  = classes
+PORT	 = 2809
 MAIN     = EcoleClient
 
 SOURCES  = $(shell find $(SRC) -name "*.java")
@@ -28,10 +29,9 @@ compile: stubs
 
 # --- 3. Exécution du client ------------------------------------------------
 run: compile
-	java -cp $(CLASSES) \
-	     -Dorg.omg.CORBA.ORBInitialHost=localhost \
-	     -Dorg.omg.CORBA.ORBInitialPort=2809 \
-	     $(MAIN)
+		java -cp $(CLASSES) $(MAIN) \
+	     -ORBInitRef NameService=corbaloc::localhost:$(PORT)/NameService
+
 
 # --- 4. Nettoyage ----------------------------------------------------------
 clean:

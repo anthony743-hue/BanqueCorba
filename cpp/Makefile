@@ -4,6 +4,7 @@
 
 IDL_FILE = ../idl/ecole.idl
 CIBLE    = ecole_serveur
+PORT     = 2809
 
 CXX      = g++
 CXXFLAGS = -Wall -O2 -std=c++17 -I. $(shell mysql_config --include)
@@ -48,4 +49,8 @@ $(CIBLE): $(OBJETS)
 clean:
 	rm -f $(CIBLE) *.o $(GEN_HH) $(GEN_CC)
 
-.PHONY: all clean
+# 6. Exécution (suppose que omniNames tourne déjà sur $(PORT))
+run: $(CIBLE)
+	./$(CIBLE) -ORBInitRef NameService=corbaloc::localhost:$(PORT)/NameService
+
+.PHONY: all clean run

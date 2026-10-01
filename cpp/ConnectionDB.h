@@ -4,11 +4,8 @@
 
 #include <string>
 #include <cstdint>
-<<<<<<< HEAD
 #include <mysql_driver.h>
 #include <mysql_connection.h>
-=======
->>>>>>> ebab1f8923d065108095193a7b8a20219a7cf21b
 
 using namespace std;
 
